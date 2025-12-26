@@ -133,6 +133,11 @@ Le système collecte automatiquement:
 - Temps passé sur les pages
 - Interactions avec le chatbot
 - Événements personnalisés
+- **Géolocalisation IP** (via ipapi.com)
+  - Pays, région, ville, timezone
+  - Coordonnées GPS (latitude, longitude)
+  - Informations ISP et organisation
+  - Collecte automatique lors de l'enregistrement d'un visiteur
 
 ## 🛠️ Développement
 
