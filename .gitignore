@@ -41,6 +41,10 @@ tmp/
 temp/
 *.tmp
 
+# Build reports
+.vercel-build-report.json
+public/README.md
+
 # Documentation files (keep local, exclude from GitHub)
 *.md
 !README.md
