@@ -58,7 +58,8 @@ router.post('/pageview', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Analytics pageview error:', error);
-        res.status(500).json({ error: 'Erreur lors de l\'enregistrement de la page vue' });
+        // Return success even if logging fails to avoid breaking the frontend
+        res.json({ success: true, warning: 'Logging failed but request processed' });
     }
 });
 
@@ -83,7 +84,8 @@ router.post('/event', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Analytics event error:', error);
-        res.status(500).json({ error: 'Erreur lors de l\'enregistrement de l\'événement' });
+        // Return success even if logging fails to avoid breaking the frontend
+        res.json({ success: true, warning: 'Logging failed but request processed' });
     }
 });
 

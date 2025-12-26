@@ -19,8 +19,8 @@ class ChatbotWidget {
         this.messagesContainer = document.getElementById('chatbotMessages');
         this.input = document.getElementById('chatbotInput');
         this.sendBtn = document.getElementById('chatbotSend');
-        this.typingIndicator = document.getElementById('chatbotTyping');
-        this.badge = document.getElementById('chatbotBadge');
+        this.typingIndicator = document.getElementById('chatbotTyping'); // Optional
+        this.badge = document.getElementById('chatbotBadge'); // Optional
 
         // Event listeners
         this.toggle.addEventListener('click', () => this.toggleChatbot());
@@ -151,20 +151,26 @@ class ChatbotWidget {
         this.sendBtn.disabled = isTyping;
         this.input.disabled = isTyping;
         
-        if (isTyping) {
-            this.typingIndicator.style.display = 'flex';
-        } else {
-            this.typingIndicator.style.display = 'none';
+        if (this.typingIndicator) {
+            if (isTyping) {
+                this.typingIndicator.style.display = 'flex';
+            } else {
+                this.typingIndicator.style.display = 'none';
+            }
         }
     }
 
     showBadge(count = 1) {
-        this.badge.textContent = count;
-        this.badge.style.display = 'flex';
+        if (this.badge) {
+            this.badge.textContent = count;
+            this.badge.style.display = 'flex';
+        }
     }
 
     hideBadge() {
-        this.badge.style.display = 'none';
+        if (this.badge) {
+            this.badge.style.display = 'none';
+        }
     }
 
     escapeHtml(text) {

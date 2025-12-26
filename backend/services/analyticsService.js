@@ -1,10 +1,24 @@
 const { getDatabase } = require('../models/database');
 
+// Helper to safely get database (handles errors gracefully)
+function safeGetDatabase() {
+    try {
+        return getDatabase();
+    } catch (error) {
+        console.error('Database not available:', error.message);
+        return null;
+    }
+}
+
 /**
  * Log a new visitor or update existing visitor
  */
 async function logVisitor(visitorData) {
-    const db = getDatabase();
+    const db = safeGetDatabase();
+    if (!db) {
+        console.warn('Database not available, skipping visitor log');
+        return Promise.resolve();
+    }
     
     return new Promise((resolve, reject) => {
         // Check if visitor exists
@@ -97,7 +111,11 @@ async function logVisitor(visitorData) {
  * Log a page view
  */
 async function logPageView(pageViewData) {
-    const db = getDatabase();
+    const db = safeGetDatabase();
+    if (!db) {
+        console.warn('Database not available, skipping page view log');
+        return Promise.resolve();
+    }
     
     return new Promise((resolve, reject) => {
         db.run(
@@ -122,7 +140,11 @@ async function logPageView(pageViewData) {
  * Log a chat interaction
  */
 async function logChatInteraction(chatData) {
-    const db = getDatabase();
+    const db = safeGetDatabase();
+    if (!db) {
+        console.warn('Database not available, skipping chat log');
+        return Promise.resolve();
+    }
     
     return new Promise((resolve, reject) => {
         db.run(
@@ -151,7 +173,11 @@ async function logChatInteraction(chatData) {
  * Log a custom event
  */
 async function logEvent(eventData) {
-    const db = getDatabase();
+    const db = safeGetDatabase();
+    if (!db) {
+        console.warn('Database not available, skipping event log');
+        return Promise.resolve();
+    }
     
     return new Promise((resolve, reject) => {
         db.run(
