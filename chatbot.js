@@ -7,6 +7,7 @@ class ChatbotWidget {
         this.sessionId = this.generateSessionId();
         this.isOpen = false;
         this.isTyping = false;
+        this.hasShownWelcome = false;
         
         this.init();
     }
@@ -75,6 +76,12 @@ class ChatbotWidget {
         this.container.classList.add('active');
         this.input.focus();
         this.hideBadge();
+        
+        // Show welcome message if this is the first time opening
+        if (!this.hasShownWelcome) {
+            this.addMessage("Hi! My name is Nicky's Pizza. How can I help you today?", 'bot');
+            this.hasShownWelcome = true;
+        }
     }
 
     closeChatbot() {
