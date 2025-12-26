@@ -2,28 +2,18 @@ const axios = require('axios');
 const promptManager = require('./promptManager');
 const personaDetector = require('./personaDetector');
 
-// AI Provider Configuration - Support for multiple free providers
-const AI_PROVIDER = process.env.AI_PROVIDER || 'groq'; // groq, openrouter, deepseek, huggingface
+// AI Provider Configuration - ONLY Ollama and DeepSeek (FREE models only)
+const AI_PROVIDER = process.env.AI_PROVIDER || 'deepseek'; // deepseek or ollama
 
-// Groq (Free, Fast, Recommended)
-const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.OLLAMA_API_KEY || '';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1';
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-70b-versatile';
-
-// OpenRouter (Free tier available)
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct:free';
-
-// DeepSeek (Free tier available)
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+// DeepSeek (FREE - Default)
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-51049ef2af114b72a98c17837c393017';
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1';
-const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat'; // FREE model
 
-// HuggingFace (Free tier available)
-const HF_API_KEY = process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY || '';
-const HF_API_URL = 'https://api-inference.huggingface.co/models';
-const HF_MODEL = process.env.HF_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
+// Ollama (Local or Cloud - FREE)
+const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
 
 const TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT) || 30000;
 
@@ -32,62 +22,39 @@ const TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT) || 30000;
  */
 class OllamaService {
     /**
-     * Get API configuration based on provider
+     * Get API configuration based on provider (ONLY DeepSeek or Ollama - FREE models)
      */
     getApiConfig() {
-        switch (AI_PROVIDER.toLowerCase()) {
-            case 'groq':
-                if (!GROQ_API_KEY) {
-                    throw new Error('GROQ_API_KEY not configured. Please set it in Vercel environment variables.');
-                }
-                return {
-                    url: `${GROQ_API_URL}/chat/completions`,
-                    model: GROQ_MODEL,
-                    apiKey: GROQ_API_KEY,
-                    provider: 'groq'
-                };
-            
-            case 'openrouter':
-                if (!OPENROUTER_API_KEY) {
-                    throw new Error('OPENROUTER_API_KEY not configured. Please set it in Vercel environment variables.');
-                }
-                return {
-                    url: `${OPENROUTER_API_URL}/chat/completions`,
-                    model: OPENROUTER_MODEL,
-                    apiKey: OPENROUTER_API_KEY,
-                    provider: 'openrouter',
-                    headers: {
-                        'HTTP-Referer': process.env.FRONTEND_URL || 'https://azzcolabs.business',
-                        'X-Title': 'AZZ&CO LABS Chatbot'
-                    }
-                };
-            
-            case 'deepseek':
-                if (!DEEPSEEK_API_KEY) {
-                    throw new Error('DEEPSEEK_API_KEY not configured. Please set it in Vercel environment variables.');
-                }
-                return {
-                    url: `${DEEPSEEK_API_URL}/chat/completions`,
-                    model: DEEPSEEK_MODEL,
-                    apiKey: DEEPSEEK_API_KEY,
-                    provider: 'deepseek'
-                };
-            
-            case 'huggingface':
-            case 'hf':
-                if (!HF_API_KEY) {
-                    throw new Error('HF_API_KEY or HUGGINGFACE_API_KEY not configured. Please set it in Vercel environment variables.');
-                }
-                return {
-                    url: `${HF_API_URL}/${HF_MODEL}`,
-                    model: HF_MODEL,
-                    apiKey: HF_API_KEY,
-                    provider: 'huggingface'
-                };
-            
-            default:
-                throw new Error(`Unknown AI provider: ${AI_PROVIDER}. Supported providers: groq, openrouter, deepseek, huggingface`);
+        const provider = AI_PROVIDER.toLowerCase();
+        
+        if (provider === 'deepseek') {
+            if (!DEEPSEEK_API_KEY) {
+                throw new Error('DEEPSEEK_API_KEY not configured. Please set it in Vercel environment variables.');
+            }
+            return {
+                url: `${DEEPSEEK_API_URL}/chat/completions`,
+                model: DEEPSEEK_MODEL,
+                apiKey: DEEPSEEK_API_KEY,
+                provider: 'deepseek',
+                format: 'openai'
+            };
         }
+        
+        if (provider === 'ollama') {
+            // Check if Ollama URL is configured (can be localhost or cloud service)
+            if (!OLLAMA_API_URL || OLLAMA_API_URL === 'http://localhost:11434') {
+                throw new Error('OLLAMA_API_URL not configured for production. For Vercel, use a cloud Ollama service or set AI_PROVIDER=deepseek');
+            }
+            return {
+                url: `${OLLAMA_API_URL}/api/generate`,
+                model: OLLAMA_MODEL,
+                apiKey: OLLAMA_API_KEY || '',
+                provider: 'ollama',
+                format: 'ollama'
+            };
+        }
+        
+        throw new Error(`Unknown AI provider: ${AI_PROVIDER}. Supported providers: deepseek, ollama`);
     }
 
     /**
@@ -189,16 +156,19 @@ class OllamaService {
             const headers = this.getHeaders(apiConfig);
             let response;
             
-            if (apiConfig.provider === 'huggingface') {
-                // HuggingFace uses a different format
+            if (apiConfig.format === 'ollama') {
+                // Native Ollama format
+                console.log('📡 Using Ollama native format');
                 response = await axios.post(
                     apiConfig.url,
                     {
-                        inputs: userMessage,
-                        parameters: {
-                            max_new_tokens: 500,
+                        model: apiConfig.model,
+                        prompt: prompt,
+                        stream: false,
+                        options: {
                             temperature: 0.7,
-                            return_full_text: false
+                            top_p: 0.9,
+                            top_k: 40
                         }
                     },
                     {
@@ -207,11 +177,9 @@ class OllamaService {
                     }
                 );
                 
-                const generatedText = Array.isArray(response.data) 
-                    ? response.data[0]?.generated_text || ''
-                    : response.data.generated_text || '';
+                const generatedText = response.data.response || '';
+                console.log('✅ Ollama response received, length:', generatedText.length);
                 
-                console.log('✅ HuggingFace response received, length:', generatedText.length);
                 const cleanedResponse = this.cleanResponse(generatedText);
                 
                 return {
@@ -223,7 +191,8 @@ class OllamaService {
                     provider: apiConfig.provider
                 };
             } else {
-                // OpenAI-compatible format (Groq, OpenRouter, DeepSeek)
+                // OpenAI-compatible format (DeepSeek)
+                console.log('📡 Using OpenAI-compatible format (DeepSeek)');
                 response = await axios.post(
                     apiConfig.url,
                     {
@@ -239,7 +208,7 @@ class OllamaService {
                 );
                 
                 const generatedText = response.data.choices?.[0]?.message?.content || '';
-                console.log('✅ API response received, length:', generatedText.length);
+                console.log('✅ DeepSeek response received, length:', generatedText.length);
                 
                 const cleanedResponse = this.cleanResponse(generatedText);
                 
