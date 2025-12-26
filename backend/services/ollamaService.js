@@ -6,9 +6,30 @@ const personaDetector = require('./personaDetector');
 const AI_PROVIDER = 'ollama'; // Fixed to Ollama only
 
 // Ollama Configuration - Qwen 2
-const OLLAMA_API_URL = process.env.OLLAMA_API_URL || process.env.OLLAMA_BASE_URL || 'https://api.ollama.com';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2:latest'; // Qwen 2 model
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '5814484fb98c4ed0ac478de9935428fc.2ehRIt8p5BDvJjdzgzUrNc4_';
+// On Vercel, we need a cloud service. Options:
+// 1. OpenRouter (supports Qwen 2) - https://openrouter.ai
+// 2. DeepSeek (supports Qwen 2) - https://api.deepseek.com
+// 3. Custom Ollama cloud instance
+
+const IS_VERCEL = !!process.env.VERCEL;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || IS_VERCEL;
+
+// For production/Vercel: Use OpenRouter or DeepSeek (both support Qwen 2)
+// For local: Use localhost Ollama
+let OLLAMA_API_URL, OLLAMA_MODEL, OLLAMA_API_KEY;
+
+if (IS_PRODUCTION) {
+    // Production: Use OpenRouter (supports Qwen 2) or DeepSeek
+    // OpenRouter endpoint for Qwen 2
+    OLLAMA_API_URL = process.env.OLLAMA_API_URL || process.env.OLLAMA_BASE_URL || 'https://openrouter.ai/api/v1';
+    OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen/qwen-2.5-7b-instruct'; // Qwen 2 via OpenRouter
+    OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY || '5814484fb98c4ed0ac478de9935428fc.2ehRIt8p5BDvJjdzgzUrNc4_';
+} else {
+    // Local development: Use local Ollama
+    OLLAMA_API_URL = process.env.OLLAMA_API_URL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+    OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2:latest';
+    OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
+}
 
 const TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT) || 30000;
 
@@ -28,16 +49,32 @@ class OllamaService {
             throw new Error('OLLAMA_MODEL not configured. Please set it in Vercel environment variables.');
         }
         
-        console.log(`🔑 Using Ollama API: ${OLLAMA_API_URL}`);
+        // Check if using OpenRouter (cloud service)
+        const isOpenRouter = OLLAMA_API_URL.includes('openrouter.ai');
+        const isLocal = OLLAMA_API_URL.includes('localhost') || OLLAMA_API_URL.includes('127.0.0.1');
+        
+        console.log(`🔑 Using ${isOpenRouter ? 'OpenRouter' : isLocal ? 'Local Ollama' : 'Ollama Cloud'}: ${OLLAMA_API_URL}`);
         console.log(`🤖 Using model: ${OLLAMA_MODEL}`);
         
-        return {
-            url: `${OLLAMA_API_URL}/api/generate`,
-            model: OLLAMA_MODEL,
-            apiKey: OLLAMA_API_KEY || '',
-            provider: 'ollama',
-            format: 'ollama'
-        };
+        if (isOpenRouter) {
+            // OpenRouter uses OpenAI-compatible format
+            return {
+                url: `${OLLAMA_API_URL}/chat/completions`,
+                model: OLLAMA_MODEL,
+                apiKey: OLLAMA_API_KEY || '',
+                provider: 'ollama',
+                format: 'openai' // OpenRouter uses OpenAI format
+            };
+        } else {
+            // Native Ollama format (local or cloud)
+            return {
+                url: `${OLLAMA_API_URL}/api/generate`,
+                model: OLLAMA_MODEL,
+                apiKey: OLLAMA_API_KEY || '',
+                provider: 'ollama',
+                format: 'ollama'
+            };
+        }
     }
 
     /**
@@ -142,25 +179,56 @@ class OllamaService {
             const headers = this.getHeaders(apiConfig);
             console.log('📡 Calling Ollama API with Qwen 2...');
             
-            const response = await axios.post(
-                apiConfig.url,
-                {
-                    model: apiConfig.model,
-                    prompt: fullPrompt,
-                    stream: false,
-                    options: {
-                        temperature: 0.7,
-                        top_p: 0.9,
-                        top_k: 40
-                    }
-                },
-                {
-                    headers: headers,
-                    timeout: TIMEOUT
-                }
-            );
+            let response;
+            let generatedText = '';
             
-            const generatedText = response.data.response || '';
+            if (apiConfig.format === 'openai') {
+                // OpenRouter format (OpenAI-compatible)
+                console.log('📡 Using OpenRouter (OpenAI-compatible) format');
+                const messages = [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ];
+                
+                response = await axios.post(
+                    apiConfig.url,
+                    {
+                        model: apiConfig.model,
+                        messages: messages,
+                        temperature: 0.7,
+                        max_tokens: 500
+                    },
+                    {
+                        headers: headers,
+                        timeout: TIMEOUT
+                    }
+                );
+                
+                generatedText = response.data.choices?.[0]?.message?.content || '';
+            } else {
+                // Native Ollama format
+                console.log('📡 Using native Ollama format');
+                response = await axios.post(
+                    apiConfig.url,
+                    {
+                        model: apiConfig.model,
+                        prompt: fullPrompt,
+                        stream: false,
+                        options: {
+                            temperature: 0.7,
+                            top_p: 0.9,
+                            top_k: 40
+                        }
+                    },
+                    {
+                        headers: headers,
+                        timeout: TIMEOUT
+                    }
+                );
+                
+                generatedText = response.data.response || '';
+            }
+            
             console.log('✅ Ollama (Qwen 2) response received, length:', generatedText.length);
             
             const cleanedResponse = this.cleanResponse(generatedText);
