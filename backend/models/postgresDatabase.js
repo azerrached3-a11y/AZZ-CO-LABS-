@@ -135,6 +135,33 @@ async function createTables() {
             console.error('❌ Error creating table:', error.message);
         }
     }
+
+    // Create indexes
+    const indexes = [
+        'CREATE INDEX IF NOT EXISTS idx_notes_visitor_id ON notes(visitor_id)',
+        'CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_chat_logs_visitor_id ON chat_logs(visitor_id)',
+        'CREATE INDEX IF NOT EXISTS idx_page_views_visitor_id ON page_views(visitor_id)',
+        'CREATE INDEX IF NOT EXISTS idx_events_visitor_id ON events(visitor_id)'
+    ];
+
+    for (const indexQuery of indexes) {
+        try {
+            await pool.query(indexQuery);
+        } catch (error) {
+            console.warn('⚠️  Warning creating index:', error.message);
+        }
+    }
+    ];
+
+    for (const query of queries) {
+        try {
+            await pool.query(query);
+            console.log('✅ Table created/verified');
+        } catch (error) {
+            console.error('❌ Error creating table:', error.message);
+        }
+    }
     
     // Create indexes for notes table
     try {
