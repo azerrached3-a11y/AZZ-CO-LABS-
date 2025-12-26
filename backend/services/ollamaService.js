@@ -25,7 +25,14 @@ class OllamaService {
      * Get API configuration based on provider (ONLY DeepSeek or Ollama - FREE models)
      */
     getApiConfig() {
-        const provider = AI_PROVIDER.toLowerCase();
+        let provider = AI_PROVIDER.toLowerCase().trim();
+        
+        // Auto-convert deprecated providers to DeepSeek
+        const deprecatedProviders = ['groq', 'openrouter', 'huggingface', 'hf', 'openai'];
+        if (deprecatedProviders.includes(provider)) {
+            console.warn(`⚠️  Provider "${provider}" is deprecated. Auto-converting to "deepseek". Please update AI_PROVIDER in Vercel to "deepseek".`);
+            provider = 'deepseek';
+        }
         
         if (provider === 'deepseek') {
             if (!DEEPSEEK_API_KEY) {
@@ -54,7 +61,7 @@ class OllamaService {
             };
         }
         
-        throw new Error(`Unknown AI provider: ${AI_PROVIDER}. Supported providers: deepseek, ollama`);
+        throw new Error(`Unknown AI provider: "${AI_PROVIDER}". Supported providers: deepseek, ollama. Please set AI_PROVIDER=deepseek in Vercel environment variables.`);
     }
 
     /**
@@ -111,7 +118,7 @@ class OllamaService {
     }
 
     /**
-     * Generate response using AI provider (Groq, OpenRouter, DeepSeek, etc.)
+     * Generate response using AI provider (DeepSeek or Ollama - FREE models only)
      */
     async generateResponse(userMessage, interactionHistory = [], visitorId = null) {
         try {
@@ -230,7 +237,8 @@ class OllamaService {
             
             // NO FALLBACK - Return error message instead
             const errorMessage = error.response?.data?.error?.message || error.message || 'Erreur inconnue';
-            throw new Error(`Erreur lors de l'appel à l'API ${AI_PROVIDER}: ${errorMessage}. Veuillez vérifier votre configuration API dans Vercel.`);
+            const actualProvider = apiConfig?.provider || AI_PROVIDER;
+            throw new Error(`Erreur lors de l'appel à l'API ${actualProvider}: ${errorMessage}. Veuillez vérifier votre configuration API dans Vercel.`);
         }
     }
 
