@@ -17,28 +17,45 @@ async function initPostgresDatabase() {
     
     if (!databaseUrl) {
         console.warn('⚠️  No PostgreSQL URL found, falling back to SQLite');
+        console.warn('⚠️  Set POSTGRES_URL or DATABASE_URL in environment variables');
         return false;
     }
 
     try {
+        console.log('🔵 Attempting PostgreSQL connection...');
+        console.log('🔵 Database URL:', databaseUrl.replace(/:[^:@]+@/, ':****@')); // Hide password in logs
+        
         pool = new Pool({
             connectionString: databaseUrl,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+            ssl: { rejectUnauthorized: false }, // Always use SSL for Supabase
+            max: 10,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 10000
         });
 
+        // Test connection
+        const testResult = await pool.query('SELECT NOW()');
+        console.log('✅ PostgreSQL connection verified at:', testResult.rows[0].now);
+        
         isPostgres = true;
         console.log('✅ Connected to PostgreSQL database');
         
-        // Test connection
-        await pool.query('SELECT NOW()');
-        console.log('✅ PostgreSQL connection verified');
-        
-        // Create tables
+        // Create tables - CRITICAL: This must succeed
+        console.log('🔵 Creating tables...');
         await createTables();
+        console.log('✅ All tables created/verified successfully');
         
         return true;
     } catch (error) {
-        console.error('❌ Failed to initialize PostgreSQL:', error);
+        console.error('❌ Failed to initialize PostgreSQL:', error.message);
+        console.error('❌ Error details:', error);
+        if (pool) {
+            try {
+                await pool.end();
+            } catch (e) {
+                // Ignore
+            }
+        }
         pool = null;
         isPostgres = false;
         return false;
@@ -49,7 +66,12 @@ async function initPostgresDatabase() {
  * Create tables if they don't exist
  */
 async function createTables() {
-    if (!pool) return;
+    if (!pool) {
+        console.error('❌ Cannot create tables: PostgreSQL pool not initialized');
+        return;
+    }
+
+    console.log('🔵 Starting table creation...');
 
     const queries = [
         // Visitors table
@@ -127,12 +149,18 @@ async function createTables() {
         )`
     ];
 
-    for (const query of queries) {
+    for (let i = 0; i < queries.length; i++) {
+        const query = queries[i];
+        const tableNames = ['visitors', 'chat_logs', 'page_views', 'events', 'notes'];
+        const tableName = tableNames[i] || `table_${i + 1}`;
+        
         try {
             await pool.query(query);
-            console.log('✅ Table created/verified');
+            console.log(`✅ Table "${tableName}" created/verified`);
         } catch (error) {
-            console.error('❌ Error creating table:', error.message);
+            console.error(`❌ Error creating table "${tableName}":`, error.message);
+            console.error(`❌ SQL Error:`, error);
+            // Don't throw - continue with other tables
         }
     }
 
