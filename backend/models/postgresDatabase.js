@@ -12,12 +12,12 @@ let isPostgres = false;
 /**
  * Initialize PostgreSQL connection
  */
-function initPostgresDatabase() {
+async function initPostgresDatabase() {
     const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
     
     if (!databaseUrl) {
         console.warn('⚠️  No PostgreSQL URL found, falling back to SQLite');
-        return null;
+        return false;
     }
 
     try {
@@ -30,18 +30,18 @@ function initPostgresDatabase() {
         console.log('✅ Connected to PostgreSQL database');
         
         // Test connection
-        return pool.query('SELECT NOW()')
-            .then(() => {
-                console.log('✅ PostgreSQL connection verified');
-                return createTables();
-            })
-            .catch(err => {
-                console.error('❌ PostgreSQL connection error:', err);
-                throw err;
-            });
+        await pool.query('SELECT NOW()');
+        console.log('✅ PostgreSQL connection verified');
+        
+        // Create tables
+        await createTables();
+        
+        return true;
     } catch (error) {
         console.error('❌ Failed to initialize PostgreSQL:', error);
-        return null;
+        pool = null;
+        isPostgres = false;
+        return false;
     }
 }
 

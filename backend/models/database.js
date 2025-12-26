@@ -16,8 +16,8 @@ let usePostgres = false;
 
 async function initDatabase() {
     // Try PostgreSQL first (for production)
-    const postgresDb = await initPostgresDatabase();
-    if (postgresDb) {
+    const postgresInitialized = await initPostgresDatabase();
+    if (postgresInitialized) {
         usePostgres = true;
         return Promise.resolve();
     }
