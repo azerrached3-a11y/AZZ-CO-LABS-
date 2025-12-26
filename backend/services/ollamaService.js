@@ -15,7 +15,7 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production' || IS_VERCEL;
 // OpenRouter (Primary)
 const OPENROUTER_URL = process.env.OLLAMA_API_URL || process.env.OPENROUTER_URL || 'https://openrouter.ai/api/v1';
 const OPENROUTER_MODEL = process.env.OLLAMA_MODEL || process.env.OPENROUTER_MODEL || 'qwen/qwen-2.5-7b-instruct';
-const OPENROUTER_API_KEY = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY || '5814484fb98c4ed0ac478de9935428fc.2ehRIt8p5BDvJjdzgzUrNc4_';
+const OPENROUTER_API_KEY = process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY || '7fa94d77037849b4a64baaa436a3c25c.Wu_-AuooKGwm-xlKD1VJMzE8';
 
 // DeepSeek (Fallback)
 const DEEPSEEK_URL = process.env.DEEPSEEK_URL || 'https://api.deepseek.com/v1';
