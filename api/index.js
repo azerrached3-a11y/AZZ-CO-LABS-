@@ -29,11 +29,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
 
-// Rate limiting
+// Rate limiting - Return JSON instead of text
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-    message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.'
+    handler: (req, res) => {
+        res.json({ 
+            success: false,
+            error: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.'
+        });
+    }
 });
 app.use('/api/', limiter);
 
@@ -42,26 +47,10 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Wrap all routes in error handler to prevent 500s
-const wrapAsync = (fn) => {
-    return (req, res, next) => {
-        Promise.resolve(fn(req, res, next)).catch((err) => {
-            console.error('Route error caught:', err);
-            if (!res.headersSent) {
-                res.json({
-                    success: false,
-                    error: 'Une erreur est survenue',
-                    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-                });
-            }
-        });
-    };
-};
-
-// Routes with error wrapping
-app.use('/api/chatbot', wrapAsync(chatbotRoutes));
-app.use('/api/analytics', wrapAsync(analyticsRoutes));
-app.use('/api/notes', wrapAsync(notesRoutes));
+// Routes - Express will handle errors through error middleware
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notes', notesRoutes);
 
 // Error handling - Always return valid JSON, never 500
 app.use((err, req, res, next) => {
