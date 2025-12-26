@@ -1208,11 +1208,16 @@ section {
 }
 
 .footer-logo {
-    height: 32px;
+    height: 40px;
     width: auto;
     margin-bottom: 1rem;
-    opacity: 0.9;
+    opacity: 0.95;
     filter: brightness(0) invert(1);
+    transition: opacity var(--transition-base);
+}
+
+.footer-logo:hover {
+    opacity: 1;
 }
 
 .footer-section h3,
