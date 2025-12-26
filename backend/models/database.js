@@ -3,25 +3,36 @@ const path = require('path');
 const fs = require('fs');
 const { initPostgresDatabase, getPostgresDatabase, isUsingPostgres } = require('./postgresDatabase');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data/visitors.db');
+// Detect if we're on Vercel (read-only filesystem except /tmp)
+// Check multiple environment variables that Vercel sets
+// Also check if we're in /var/task (Vercel's serverless function directory)
+let IS_VERCEL = !!(
+    process.env.VERCEL || 
+    process.env.VERCEL_ENV || 
+    process.env.VERCEL_URL
+);
+
+// Additional check: if __dirname contains /var/task, we're on Vercel
+if (!IS_VERCEL && typeof __dirname === 'string' && __dirname.includes('/var/task')) {
+    IS_VERCEL = true;
+}
+
+// On Vercel, use /tmp for SQLite if needed (but prefer PostgreSQL)
+// For local development, use backend/data
+const getDBPath = () => {
+    if (IS_VERCEL) {
+        // On Vercel, use /tmp (writable) if SQLite is needed
+        return process.env.DB_PATH || '/tmp/visitors.db';
+    }
+    // Local development
+    return process.env.DB_PATH || path.join(__dirname, '../data/visitors.db');
+};
+
+const DB_PATH = getDBPath();
 const DB_DIR = path.dirname(DB_PATH);
 
-// Detect if we're on Vercel (read-only filesystem)
-const IS_VERCEL = !!process.env.VERCEL;
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-// Only create data directory for SQLite if NOT on Vercel
-// On Vercel, we MUST use PostgreSQL (Supabase)
-if (!IS_VERCEL && !IS_PRODUCTION) {
-    // Only create directory for local development
-    try {
-        if (!fs.existsSync(DB_DIR)) {
-            fs.mkdirSync(DB_DIR, { recursive: true });
-        }
-    } catch (err) {
-        console.warn('⚠️  Could not create data directory (this is OK on Vercel):', err.message);
-    }
-}
+// NEVER create directories at module load time on Vercel
+// This will be done lazily in initDatabase() only when needed
 
 let db = null;
 let usePostgres = false;
@@ -49,10 +60,18 @@ async function initDatabase() {
     }
 
     // Fallback to SQLite (for local development only)
-    // On Vercel, we never reach here
+    // On Vercel, we never reach here (checked above)
     return new Promise((resolve, reject) => {
         // Ensure directory exists before creating database (local dev only)
+        // On Vercel, this should never execute, but add safety check
+        if (IS_VERCEL) {
+            console.warn('⚠️  Attempted to use SQLite on Vercel - this should not happen');
+            resolve(); // Don't crash, just skip SQLite
+            return;
+        }
+        
         try {
+            // Only create directory for local development
             if (!fs.existsSync(DB_DIR)) {
                 fs.mkdirSync(DB_DIR, { recursive: true });
             }
@@ -60,6 +79,7 @@ async function initDatabase() {
             console.warn('⚠️  Could not create data directory:', err.message);
             // Continue anyway - database might still work
         }
+        
         db = new sqlite3.Database(DB_PATH, (err) => {
             if (err) {
                 reject(err);
