@@ -4,6 +4,7 @@ const personaDetector = require('./personaDetector');
 
 const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama2';
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
 const TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT) || 30000;
 
 /**
@@ -11,11 +12,28 @@ const TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT) || 30000;
  */
 class OllamaService {
     /**
+     * Get headers for Ollama API requests
+     */
+    getHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (OLLAMA_API_KEY) {
+            headers['Authorization'] = `Bearer ${OLLAMA_API_KEY}`;
+            headers['X-API-Key'] = OLLAMA_API_KEY;
+        }
+        
+        return headers;
+    }
+
+    /**
      * Check if Ollama is available
      */
     async checkHealth() {
         try {
             const response = await axios.get(`${OLLAMA_API_URL}/api/tags`, {
+                headers: this.getHeaders(),
                 timeout: 5000
             });
             return { available: true, models: response.data.models || [] };
@@ -53,6 +71,7 @@ class OllamaService {
                     }
                 },
                 {
+                    headers: this.getHeaders(),
                     timeout: TIMEOUT
                 }
             );

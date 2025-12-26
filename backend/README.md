@@ -17,11 +17,25 @@ cp .env.example .env
 
 2. Configurez vos variables d'environnement dans `.env`:
 ```env
-PORT=3000
+# Ollama API Configuration
 OLLAMA_API_URL=http://localhost:11434
 OLLAMA_MODEL=llama2
-DB_PATH=./data/visitors.db
+OLLAMA_API_KEY=votre_cle_api_ici
+OLLAMA_TIMEOUT=30000
+
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+
+# Frontend URL
+FRONTEND_URL=http://localhost:5500
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 ```
+
+**Note importante :** La clé API Ollama (`OLLAMA_API_KEY`) est requise pour authentifier les requêtes vers l'API Ollama. Cette clé est automatiquement incluse dans les headers `Authorization` et `X-API-Key` de toutes les requêtes API.
 
 ## 📦 Prérequis
 
