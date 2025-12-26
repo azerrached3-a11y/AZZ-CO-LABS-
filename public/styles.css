@@ -525,10 +525,9 @@ body {
     height: 80px;
     width: auto;
     margin-bottom: 1.5rem;
-    opacity: 1;
-    display: block;
-    filter: brightness(0) invert(1);
-    -webkit-filter: brightness(0) invert(1);
+    opacity: 1 !important;
+    display: block !important;
+    visibility: visible !important;
 }
 
 .footer-content {

@@ -146,7 +146,7 @@ async function logChatInteraction(chatData) {
         return Promise.resolve();
     }
     
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         db.run(
             `INSERT INTO chat_logs (
                 visitor_id, session_id, message, response, 
@@ -162,8 +162,11 @@ async function logChatInteraction(chatData) {
                 chatData.responseTime || 0
             ],
             (err) => {
-                if (err) reject(err);
-                else resolve();
+                if (err) {
+                    console.warn('Chat interaction logging failed:', err.message);
+                }
+                // Always resolve, never reject
+                resolve();
             }
         );
     });
@@ -178,8 +181,8 @@ async function logEvent(eventData) {
         console.warn('Database not available, skipping event log');
         return Promise.resolve();
     }
-    
-    return new Promise((resolve, reject) => {
+
+    return new Promise((resolve) => {
         db.run(
             `INSERT INTO events (visitor_id, event_type, event_data)
              VALUES (?, ?, ?)`,
@@ -189,8 +192,11 @@ async function logEvent(eventData) {
                 eventData.eventData || null
             ],
             (err) => {
-                if (err) reject(err);
-                else resolve();
+                if (err) {
+                    console.warn('Event logging failed:', err.message);
+                }
+                // Always resolve, never reject
+                resolve();
             }
         );
     });
