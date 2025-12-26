@@ -6,9 +6,21 @@ const personaDetector = require('./personaDetector');
 const AI_PROVIDER = process.env.AI_PROVIDER || 'deepseek'; // deepseek or ollama
 
 // DeepSeek (FREE - Default)
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-51049ef2af114b72a98c17837c393017';
+// Support multiple API keys for rotation and fallback
+const DEEPSEEK_API_KEYS = [
+    process.env.DEEPSEEK_API_KEY,
+    process.env.DEEPSEEK_API_KEY_2,
+    process.env.DEEPSEEK_API_KEY_3,
+    process.env.DEEPSEEK_API_KEY_LEGACY,
+    'sk-51049ef2af114b72a98c17837c393017' // Fallback default
+].filter(key => key && key.trim() !== ''); // Remove empty keys
+
+const DEEPSEEK_API_KEY = DEEPSEEK_API_KEYS[0] || null; // Primary key (for backward compatibility)
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1';
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat'; // FREE model
+
+// Key rotation index (for round-robin)
+let currentKeyIndex = 0;
 
 // Ollama (Local or Cloud - FREE)
 const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
@@ -21,6 +33,22 @@ const TIMEOUT = parseInt(process.env.OLLAMA_TIMEOUT) || 30000;
  * Service for interacting with Ollama API
  */
 class OllamaService {
+    /**
+     * Get the next available DeepSeek API key (round-robin rotation)
+     * @returns {string|null} API key or null if none available
+     */
+    getNextDeepSeekKey() {
+        if (DEEPSEEK_API_KEYS.length === 0) {
+            return null;
+        }
+        
+        // Round-robin: cycle through all available keys
+        const key = DEEPSEEK_API_KEYS[currentKeyIndex];
+        currentKeyIndex = (currentKeyIndex + 1) % DEEPSEEK_API_KEYS.length;
+        
+        return key;
+    }
+    
     /**
      * Get API configuration based on provider (ONLY DeepSeek or Ollama - FREE models)
      */
@@ -35,15 +63,22 @@ class OllamaService {
         }
         
         if (provider === 'deepseek') {
-            if (!DEEPSEEK_API_KEY) {
-                throw new Error('DEEPSEEK_API_KEY not configured. Please set it in Vercel environment variables.');
+            // Try to get an available key
+            const apiKey = this.getNextDeepSeekKey();
+            
+            if (!apiKey) {
+                throw new Error(`Aucune clé API DeepSeek configurée. ${DEEPSEEK_API_KEYS.length} clé(s) trouvée(s) dans l'environnement, mais aucune n'est valide. Veuillez vérifier DEEPSEEK_API_KEY dans Vercel.`);
             }
+            
+            console.log(`🔑 Using DeepSeek API key (${DEEPSEEK_API_KEYS.length} key(s) available, using key #${currentKeyIndex === 0 ? DEEPSEEK_API_KEYS.length : currentKeyIndex})`);
+            
             return {
                 url: `${DEEPSEEK_API_URL}/chat/completions`,
                 model: DEEPSEEK_MODEL,
-                apiKey: DEEPSEEK_API_KEY,
+                apiKey: apiKey,
                 provider: 'deepseek',
-                format: 'openai'
+                format: 'openai',
+                allKeys: DEEPSEEK_API_KEYS.length // For debugging
             };
         }
         
@@ -204,34 +239,62 @@ class OllamaService {
                 };
             } else {
                 // OpenAI-compatible format (DeepSeek)
-                console.log('📡 Using OpenAI-compatible format (DeepSeek)');
-                response = await axios.post(
-                    apiConfig.url,
-                    {
-                        model: apiConfig.model,
-                        messages: messages,
-                        temperature: 0.7,
-                        max_tokens: 500
-                    },
-                    {
-                        headers: headers,
-                        timeout: TIMEOUT
+                // Try all available keys if one fails
+                let lastError = null;
+                let triedKeys = 0;
+                
+                for (let attempt = 0; attempt < DEEPSEEK_API_KEYS.length; attempt++) {
+                    try {
+                        const currentKey = DEEPSEEK_API_KEYS[attempt];
+                        console.log(`📡 Using OpenAI-compatible format (DeepSeek) - Attempt ${attempt + 1}/${DEEPSEEK_API_KEYS.length} with key #${attempt + 1}`);
+                        
+                        const currentHeaders = {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${currentKey}`
+                        };
+                        
+                        response = await axios.post(
+                            apiConfig.url,
+                            {
+                                model: apiConfig.model,
+                                messages: messages,
+                                temperature: 0.7,
+                                max_tokens: 500
+                            },
+                            {
+                                headers: currentHeaders,
+                                timeout: TIMEOUT
+                            }
+                        );
+                        
+                        const generatedText = response.data.choices?.[0]?.message?.content || '';
+                        console.log(`✅ DeepSeek response received (key #${attempt + 1} worked), length:`, generatedText.length);
+                        
+                        const cleanedResponse = this.cleanResponse(generatedText);
+                        
+                        return {
+                            response: cleanedResponse,
+                            persona: persona,
+                            confidence: personaDetection.confidence,
+                            contextKeywords: contextKeywords,
+                            model: apiConfig.model,
+                            provider: apiConfig.provider
+                        };
+                    } catch (keyError) {
+                        triedKeys++;
+                        lastError = keyError;
+                        console.warn(`⚠️  Key #${attempt + 1} failed:`, keyError.response?.status || keyError.message);
+                        
+                        // If this is not the last key, try the next one
+                        if (attempt < DEEPSEEK_API_KEYS.length - 1) {
+                            console.log(`🔄 Retrying with next key...`);
+                            continue;
+                        }
                     }
-                );
+                }
                 
-                const generatedText = response.data.choices?.[0]?.message?.content || '';
-                console.log('✅ DeepSeek response received, length:', generatedText.length);
-                
-                const cleanedResponse = this.cleanResponse(generatedText);
-                
-                return {
-                    response: cleanedResponse,
-                    persona: persona,
-                    confidence: personaDetection.confidence,
-                    contextKeywords: contextKeywords,
-                    model: apiConfig.model,
-                    provider: apiConfig.provider
-                };
+                // All keys failed
+                throw new Error(`Toutes les clés DeepSeek ont échoué (${triedKeys}/${DEEPSEEK_API_KEYS.length} testées). Dernière erreur: ${lastError?.response?.status || lastError?.message || 'Erreur inconnue'}`);
             }
         } catch (error) {
             console.error('❌ AI API Error:', error.message);
