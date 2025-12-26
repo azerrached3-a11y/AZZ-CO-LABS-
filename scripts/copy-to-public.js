@@ -21,7 +21,8 @@ const staticFiles = [
     'styles.css',
     'script.js',
     'chatbot.js',
-    'speed-insights.js'
+    'speed-insights.js',
+    'favicon.svg'
 ];
 
 // Directories to copy
