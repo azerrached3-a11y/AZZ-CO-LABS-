@@ -90,6 +90,12 @@ class OllamaService {
             headers['Authorization'] = `Bearer ${apiConfig.apiKey}`;
         }
         
+        // OpenRouter requires additional headers
+        if (OLLAMA_API_URL.includes('openrouter.ai')) {
+            headers['HTTP-Referer'] = process.env.OPENROUTER_REFERER || 'https://azzcolabs.business';
+            headers['X-Title'] = process.env.OPENROUTER_TITLE || 'AZZ&CO LABS';
+        }
+        
         return headers;
     }
 
@@ -185,26 +191,44 @@ class OllamaService {
             if (apiConfig.format === 'openai') {
                 // OpenRouter format (OpenAI-compatible)
                 console.log('📡 Using OpenRouter (OpenAI-compatible) format');
+                console.log('📡 URL:', apiConfig.url);
+                console.log('📡 Model:', apiConfig.model);
+                console.log('📡 Headers:', JSON.stringify(headers).replace(/Bearer [^\"]+/, 'Bearer ***'));
+                
                 const messages = [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage }
                 ];
                 
-                response = await axios.post(
-                    apiConfig.url,
-                    {
-                        model: apiConfig.model,
-                        messages: messages,
-                        temperature: 0.7,
-                        max_tokens: 500
-                    },
-                    {
-                        headers: headers,
-                        timeout: TIMEOUT
+                try {
+                    response = await axios.post(
+                        apiConfig.url,
+                        {
+                            model: apiConfig.model,
+                            messages: messages,
+                            temperature: 0.7,
+                            max_tokens: 500
+                        },
+                        {
+                            headers: headers,
+                            timeout: TIMEOUT
+                        }
+                    );
+                    
+                    generatedText = response.data.choices?.[0]?.message?.content || '';
+                    
+                    if (!generatedText) {
+                        console.error('❌ Empty response from OpenRouter:', JSON.stringify(response.data));
+                        throw new Error('Réponse vide de OpenRouter. Vérifiez la clé API et le modèle.');
                     }
-                );
-                
-                generatedText = response.data.choices?.[0]?.message?.content || '';
+                } catch (openRouterError) {
+                    console.error('❌ OpenRouter API Error:', openRouterError.message);
+                    if (openRouterError.response) {
+                        console.error('❌ Status:', openRouterError.response.status);
+                        console.error('❌ Data:', JSON.stringify(openRouterError.response.data));
+                    }
+                    throw openRouterError;
+                }
             } else {
                 // Native Ollama format
                 console.log('📡 Using native Ollama format');
@@ -249,11 +273,23 @@ class OllamaService {
             }
             
             // NO FALLBACK - Return error message instead
-            const errorMessage = error.response?.data?.error?.message || error.message || 'Erreur inconnue';
+            let errorMessage = error.response?.data?.error?.message || error.message || 'Erreur inconnue';
+            
+            // More specific error messages
+            if (error.response?.status === 401) {
+                errorMessage = 'Clé API invalide. Vérifiez OLLAMA_API_KEY dans Vercel.';
+            } else if (error.response?.status === 404) {
+                errorMessage = 'Modèle non trouvé. Vérifiez OLLAMA_MODEL (essayez: qwen/qwen-2.5-7b-instruct).';
+            } else if (error.response?.status === 429) {
+                errorMessage = 'Limite de taux dépassée. Attendez quelques instants.';
+            } else if (error.code === 'ECONNREFUSED') {
+                errorMessage = 'Impossible de se connecter à l\'API. Vérifiez OLLAMA_API_URL.';
+            }
+            
             const actualProvider = apiConfig?.provider || 'ollama';
             const actualModel = apiConfig?.model || OLLAMA_MODEL;
             
-            throw new Error(`Erreur lors de l'appel à Ollama (${actualModel}): ${errorMessage}. Veuillez vérifier OLLAMA_API_URL et OLLAMA_API_KEY dans Vercel.`);
+            throw new Error(`Erreur lors de l'appel à ${OLLAMA_API_URL.includes('openrouter') ? 'OpenRouter' : 'Ollama'} (${actualModel}): ${errorMessage}. Vérifiez vos variables d'environnement dans Vercel.`);
         }
     }
 
