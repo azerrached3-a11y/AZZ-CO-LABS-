@@ -4,47 +4,40 @@
     {
       "src": "backend/server.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/index.html"
+      "src": "/api/(.*)",
+      "dest": "backend/server.js"
     },
     {
-      "source": "/mission",
-      "destination": "/mission.html"
+      "src": "/(.*\\.html)",
+      "dest": "/$1"
     },
     {
-      "source": "/jobboat",
-      "destination": "/jobboat.html"
+      "src": "/mission",
+      "dest": "/mission.html"
     },
     {
-      "source": "/invest",
-      "destination": "/invest.html"
+      "src": "/jobboat",
+      "dest": "/jobboat.html"
     },
     {
-      "source": "/outwings",
-      "destination": "/outwings.html"
+      "src": "/invest",
+      "dest": "/invest.html"
     },
     {
-      "source": "/contact",
-      "destination": "/contact.html"
-    }
-  ],
-  "headers": [
+      "src": "/outwings",
+      "dest": "/outwings.html"
+    },
     {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
+      "src": "/contact",
+      "dest": "/contact.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "env": {
