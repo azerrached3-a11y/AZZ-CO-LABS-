@@ -23,6 +23,9 @@ OLLAMA_MODEL=llama2
 OLLAMA_API_KEY=votre_cle_api_ollama_ici
 OLLAMA_TIMEOUT=30000
 
+# IP Geolocation API (ipapi.com)
+IPAPI_API_KEY=votre_cle_api_ipapi_ici
+
 # Server Configuration
 PORT=3000
 NODE_ENV=production

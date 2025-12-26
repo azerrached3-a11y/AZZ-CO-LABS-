@@ -3,10 +3,11 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { logVisitor, logPageView, logEvent } = require('../services/analyticsService');
 const { getDatabase } = require('../models/database');
+const geolocationService = require('../services/geolocationService');
 
 /**
  * POST /api/analytics/visitor
- * Log a new visitor
+ * Log a new visitor with geolocation
  */
 router.post('/visitor', async (req, res) => {
     try {
@@ -18,8 +19,16 @@ router.post('/visitor', async (req, res) => {
             ...req.body
         };
 
-        await logVisitor(visitorData);
-        res.json({ success: true, visitorId: visitorData.visitorId });
+        // Enrich with geolocation data
+        const enrichedData = await geolocationService.enrichVisitorData(visitorData, req);
+
+        await logVisitor(enrichedData);
+        res.json({ 
+            success: true, 
+            visitorId: enrichedData.visitorId,
+            location: enrichedData.city && enrichedData.country ? 
+                `${enrichedData.city}, ${enrichedData.country}` : null
+        });
     } catch (error) {
         console.error('Analytics visitor error:', error);
         res.status(500).json({ error: 'Erreur lors de l\'enregistrement du visiteur' });

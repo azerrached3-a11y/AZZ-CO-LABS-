@@ -25,12 +25,28 @@ async function logVisitor(visitorData) {
                              visit_count = visit_count + 1,
                              ip_address = ?,
                              user_agent = ?,
-                             referrer = ?
+                             referrer = ?,
+                             country = COALESCE(?, country),
+                             country_code = COALESCE(?, country_code),
+                             region = COALESCE(?, region),
+                             city = COALESCE(?, city),
+                             timezone = COALESCE(?, timezone),
+                             latitude = COALESCE(?, latitude),
+                             longitude = COALESCE(?, longitude),
+                             isp = COALESCE(?, isp)
                          WHERE visitor_id = ?`,
                         [
                             visitorData.ipAddress,
                             visitorData.userAgent,
                             visitorData.referrer,
+                            visitorData.country || null,
+                            visitorData.countryCode || null,
+                            visitorData.region || null,
+                            visitorData.city || null,
+                            visitorData.timezone || null,
+                            visitorData.latitude || null,
+                            visitorData.longitude || null,
+                            visitorData.isp || null,
                             visitorData.visitorId
                         ],
                         (err) => {
@@ -43,15 +59,24 @@ async function logVisitor(visitorData) {
                     db.run(
                         `INSERT INTO visitors (
                             visitor_id, ip_address, user_agent, referrer,
-                            country, city, device_type, browser, os, language
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            country, country_code, region, region_code, city, 
+                            timezone, latitude, longitude, isp,
+                            device_type, browser, os, language
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
                             visitorData.visitorId,
                             visitorData.ipAddress,
                             visitorData.userAgent,
                             visitorData.referrer,
                             visitorData.country || null,
+                            visitorData.countryCode || null,
+                            visitorData.region || null,
+                            visitorData.regionCode || null,
                             visitorData.city || null,
+                            visitorData.timezone || null,
+                            visitorData.latitude || null,
+                            visitorData.longitude || null,
+                            visitorData.isp || null,
                             visitorData.deviceType || null,
                             visitorData.browser || null,
                             visitorData.os || null,
