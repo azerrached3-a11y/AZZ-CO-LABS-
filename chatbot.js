@@ -129,7 +129,7 @@ class ChatbotWidget {
         // Show welcome message if this is the first time opening
         if (!this.hasShownWelcome) {
             // Add welcome message and immediately adjust height to fit content
-            this.addMessage("Bonjour ! Je m'appelle Nicky's Pizza. Comment puis-je vous aider aujourd'hui ?", 'bot');
+            this.addMessage("Bonjour ! Je suis l'assistant AZZ&CO LABS. Comment puis-je vous aider avec nos solutions AI ?", 'bot');
             this.hasShownWelcome = true;
         } else {
             // Even without welcome message, adjust height to fit existing messages
