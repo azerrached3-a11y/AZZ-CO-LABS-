@@ -9,10 +9,24 @@ const personaDetector = require('./personaDetector');
 class OllamaService {
     constructor() {
         // ALL values from .env - NO defaults, NO hardcoded values
+        // Priority: AI_* > OLLAMA_* > OPENROUTER_*
         this.apiUrl = process.env.AI_API_URL || process.env.OLLAMA_API_URL || process.env.OPENROUTER_URL;
         this.model = process.env.AI_MODEL || process.env.OLLAMA_MODEL || process.env.OPENROUTER_MODEL;
         this.apiKey = process.env.AI_API_KEY || process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY;
         this.timeout = parseInt(process.env.AI_TIMEOUT || process.env.OLLAMA_TIMEOUT || '30000');
+        
+        // If URL is missing but we have OpenRouter key, set default OpenRouter URL
+        if (!this.apiUrl && this.apiKey && (this.apiKey.includes('openrouter') || this.apiKey.length > 50)) {
+            this.apiUrl = 'https://openrouter.ai/api/v1';
+            console.log('🔧 Auto-detected OpenRouter from API key, setting URL to:', this.apiUrl);
+        }
+        
+        // If model is missing but we have OpenRouter URL, set default free model
+        if (!this.model && this.apiUrl && this.apiUrl.includes('openrouter.ai')) {
+            // Try free models in order of preference
+            this.model = 'google/gemini-2.0-flash-exp:free'; // Free Gemini model
+            console.log('🔧 Auto-detected OpenRouter URL, setting model to:', this.model);
+        }
         
         // Determine format based on URL
         this.format = this.detectFormat(this.apiUrl);

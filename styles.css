@@ -611,18 +611,20 @@ body {
 }
 
 .chatbot-container {
-    position: absolute;
-    top: 80px;
+    position: fixed;
+    top: 0;
     right: 0;
     width: 380px;
-    min-height: 200px;
-    max-height: calc(100vh - 120px);
+    height: auto;
+    min-height: auto;
+    max-height: 100vh;
     background: var(--bg-primary);
     border: var(--border-light);
     box-shadow: var(--shadow-large);
     display: none;
     flex-direction: column;
     transition: height var(--transition-base);
+    overflow: hidden;
 }
 
 .chatbot-container.active {
@@ -780,14 +782,13 @@ body {
     .chatbot-container {
         width: 100vw;
         width: 100dvw; /* Dynamic viewport width for mobile browsers */
-        height: 100vh;
-        height: 100dvh; /* Dynamic viewport height for mobile browsers */
+        height: auto;
+        min-height: auto;
         max-height: 100vh;
         max-height: 100dvh;
         top: 0;
         right: 0;
         left: 0;
-        bottom: 0;
         border: none;
         border-radius: 0;
     }
