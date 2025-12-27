@@ -23,10 +23,54 @@ class ChatbotWidget {
         this.typingIndicator = document.getElementById('chatbotTyping'); // Optional
         this.badge = document.getElementById('chatbotBadge'); // Optional
 
+        // Check if elements exist
+        if (!this.toggle) {
+            console.error('❌ Chatbot toggle button not found!');
+            return;
+        }
+        if (!this.container) {
+            console.error('❌ Chatbot container not found!');
+            return;
+        }
+        if (!this.closeBtn) {
+            console.error('❌ Chatbot close button not found!');
+            return;
+        }
+        if (!this.messagesContainer) {
+            console.error('❌ Chatbot messages container not found!');
+            return;
+        }
+        if (!this.input) {
+            console.error('❌ Chatbot input not found!');
+            return;
+        }
+        if (!this.sendBtn) {
+            console.error('❌ Chatbot send button not found!');
+            return;
+        }
+
+        console.log('✅ Chatbot elements found, initializing...');
+
         // Event listeners
-        this.toggle.addEventListener('click', () => this.toggleChatbot());
-        this.closeBtn.addEventListener('click', () => this.closeChatbot());
-        this.sendBtn.addEventListener('click', () => this.sendMessage());
+        this.toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔘 Toggle clicked');
+            this.toggleChatbot();
+        });
+        
+        this.closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeChatbot();
+        });
+        
+        this.sendBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.sendMessage();
+        });
+        
         this.input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -237,9 +281,26 @@ class ChatbotWidget {
 }
 
 // Initialize chatbot when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.chatbot = new ChatbotWidget();
-});
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🚀 Initializing chatbot...');
+        try {
+            window.chatbot = new ChatbotWidget();
+            console.log('✅ Chatbot initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing chatbot:', error);
+        }
+    });
+} else {
+    // DOM already loaded
+    console.log('🚀 Initializing chatbot (DOM already loaded)...');
+    try {
+        window.chatbot = new ChatbotWidget();
+        console.log('✅ Chatbot initialized successfully');
+    } catch (error) {
+        console.error('❌ Error initializing chatbot:', error);
+    }
+}
 
 // Track page visibility for time spent
 let pageStartTime = Date.now();

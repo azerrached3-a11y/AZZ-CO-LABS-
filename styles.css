@@ -579,7 +579,12 @@ body {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
-    z-index: 999;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.chatbot-widget * {
+    pointer-events: auto;
 }
 
 .chatbot-toggle {
@@ -594,6 +599,10 @@ body {
     justify-content: center;
     box-shadow: var(--shadow-gold);
     transition: var(--transition-base);
+    z-index: 1000;
+    position: relative;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .chatbot-toggle:hover {
