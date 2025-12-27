@@ -3,101 +3,183 @@ const promptManager = require('./promptManager');
 const personaDetector = require('./personaDetector');
 
 /**
- * Simple AI Service - Reads ALL configuration from environment variables
- * No hardcoded values, no fallbacks, just pure .env configuration
+ * Google Gemini AI Service
+ * Uses Gemini 2.5 Flash and Flash-Lite with intelligent load balancing
  */
 class OllamaService {
     constructor() {
-        // ALL values from .env - NO defaults, NO hardcoded values
-        // Priority: AI_* > OLLAMA_* > OPENROUTER_*
-        this.apiUrl = process.env.AI_API_URL || process.env.OLLAMA_API_URL || process.env.OPENROUTER_URL;
-        this.model = process.env.AI_MODEL || process.env.OLLAMA_MODEL || process.env.OPENROUTER_MODEL;
-        this.apiKey = process.env.AI_API_KEY || process.env.OLLAMA_API_KEY || process.env.OPENROUTER_API_KEY;
-        this.timeout = parseInt(process.env.AI_TIMEOUT || process.env.OLLAMA_TIMEOUT || '30000');
+        // Google AI Studio API Key
+        this.apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
         
-        // If URL is missing but we have OpenRouter key, set default OpenRouter URL
-        if (!this.apiUrl && this.apiKey && (this.apiKey.includes('openrouter') || this.apiKey.length > 50)) {
-            this.apiUrl = 'https://openrouter.ai/api/v1';
-            console.log('🔧 Auto-detected OpenRouter from API key, setting URL to:', this.apiUrl);
-        }
+        // API Base URL for Google Gemini
+        this.apiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
         
-        // If model is missing but we have OpenRouter URL, set default free model
-        if (!this.model && this.apiUrl && this.apiUrl.includes('openrouter.ai')) {
-            // Try free models in order of preference
-            this.model = 'google/gemini-2.0-flash-exp:free'; // Free Gemini model
-            console.log('🔧 Auto-detected OpenRouter URL, setting model to:', this.model);
-        }
+        // Models configuration
+        this.models = {
+            flash: {
+                name: 'gemini-2.5-flash',
+                rpm: 15, // Requests per minute
+                rpd: 500, // Requests per day
+                priority: 1 // Higher priority for complex requests
+            },
+            flashLite: {
+                name: 'gemini-2.5-flash-lite',
+                rpm: 30, // Requests per minute
+                rpd: 1500, // Requests per day
+                priority: 2 // Lower priority, use for most requests
+            }
+        };
         
-        // Determine format based on URL
-        this.format = this.detectFormat(this.apiUrl);
+        // Rate limiting tracking
+        this.rateLimits = {
+            flash: {
+                requests: [],
+                dailyCount: 0,
+                lastReset: new Date().toDateString()
+            },
+            flashLite: {
+                requests: [],
+                dailyCount: 0,
+                lastReset: new Date().toDateString()
+            }
+        };
         
-        console.log('🔧 AI Service Configuration:');
-        console.log('   URL:', this.apiUrl ? this.apiUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'NOT SET');
-        console.log('   Model:', this.model || 'NOT SET');
+        // Timeout
+        this.timeout = parseInt(process.env.AI_TIMEOUT || '30000');
+        
+        // Reset daily counters if needed
+        this.resetDailyCountersIfNeeded();
+        
+        console.log('🔧 Google Gemini AI Service Configuration:');
         console.log('   API Key:', this.apiKey ? '***' + this.apiKey.slice(-4) : 'NOT SET');
-        console.log('   Format:', this.format);
+        console.log('   Models:', Object.keys(this.models).join(', '));
+        console.log('   Flash RPM:', this.models.flash.rpm, '| RPD:', this.models.flash.rpd);
+        console.log('   Flash-Lite RPM:', this.models.flashLite.rpm, '| RPD:', this.models.flashLite.rpd);
     }
     
     /**
-     * Detect API format from URL
+     * Reset daily counters if it's a new day
      */
-    detectFormat(url) {
-        if (!url) return 'unknown';
-        if (url.includes('openrouter.ai')) return 'openai';
-        if (url.includes('deepseek.com')) return 'openai';
-        if (url.includes('api.openai.com')) return 'openai';
-        if (url.includes('ollama') || url.includes('localhost:11434')) return 'ollama';
-        return 'openai'; // Default to OpenAI format
+    resetDailyCountersIfNeeded() {
+        const today = new Date().toDateString();
+        if (this.rateLimits.flash.lastReset !== today) {
+            this.rateLimits.flash.dailyCount = 0;
+            this.rateLimits.flash.lastReset = today;
+        }
+        if (this.rateLimits.flashLite.lastReset !== today) {
+            this.rateLimits.flashLite.dailyCount = 0;
+            this.rateLimits.flashLite.lastReset = today;
+        }
+    }
+    
+    /**
+     * Check if model is available (not rate limited)
+     */
+    isModelAvailable(modelKey) {
+        this.resetDailyCountersIfNeeded();
+        const model = this.models[modelKey];
+        const limits = this.rateLimits[modelKey];
+        
+        if (!model || !limits) return false;
+        
+        // Check daily limit
+        if (limits.dailyCount >= model.rpd) {
+            return false;
+        }
+        
+        // Check per-minute limit
+        const now = Date.now();
+        const oneMinuteAgo = now - 60000;
+        limits.requests = limits.requests.filter(timestamp => timestamp > oneMinuteAgo);
+        
+        if (limits.requests.length >= model.rpm) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Select the best available model
+     * Strategy: Use Flash-Lite for most requests (higher capacity), Flash for complex ones
+     */
+    selectModel(isComplex = false) {
+        this.resetDailyCountersIfNeeded();
+        
+        // For complex requests, prefer Flash if available
+        if (isComplex && this.isModelAvailable('flash')) {
+            return 'flash';
+        }
+        
+        // Prefer Flash-Lite (higher capacity) for most requests
+        if (this.isModelAvailable('flashLite')) {
+            return 'flashLite';
+        
+        // Fallback to Flash if Flash-Lite is unavailable
+        if (this.isModelAvailable('flash')) {
+            return 'flash';
+        }
+        
+        // Both models are rate limited
+        throw new Error('All Gemini models are currently rate limited. Please try again later.');
+    }
+    
+    /**
+     * Record a request for rate limiting
+     */
+    recordRequest(modelKey) {
+        this.resetDailyCountersIfNeeded();
+        const limits = this.rateLimits[modelKey];
+        if (limits) {
+            limits.requests.push(Date.now());
+            limits.dailyCount++;
+        }
     }
     
     /**
      * Get headers for API request
      */
     getHeaders() {
-        const headers = {
+        return {
             'Content-Type': 'application/json'
         };
-        
-        if (this.apiKey) {
-            headers['Authorization'] = `Bearer ${this.apiKey}`;
-        }
-        
-        // OpenRouter specific headers
-        if (this.apiUrl && this.apiUrl.includes('openrouter.ai')) {
-            headers['HTTP-Referer'] = process.env.OPENROUTER_REFERER || 'https://azzcolabs.business';
-            headers['X-Title'] = process.env.OPENROUTER_TITLE || 'AZZ&CO LABS';
-        }
-        
-        return headers;
     }
     
     /**
      * Check if service is available
      */
     async checkHealth() {
-        if (!this.apiUrl || !this.model) {
+        if (!this.apiKey) {
             return {
                 available: false,
-                error: 'Missing API_URL or MODEL in environment variables'
+                error: 'GOOGLE_AI_API_KEY or GEMINI_API_KEY not set in environment variables'
             };
         }
         
         try {
-            if (this.format === 'ollama') {
-                const response = await axios.post(
-                    `${this.apiUrl}/api/generate`,
-                    { model: this.model, prompt: 'test', stream: false },
-                    { headers: this.getHeaders(), timeout: 5000 }
-                );
-                return { available: true, provider: 'ollama', model: this.model };
-            } else {
-                const response = await axios.post(
-                    `${this.apiUrl}/chat/completions`,
-                    { model: this.model, messages: [{ role: 'user', content: 'test' }], max_tokens: 5 },
-                    { headers: this.getHeaders(), timeout: 5000 }
-                );
-                return { available: true, provider: 'openai-compatible', model: this.model };
-            }
+            // Test with Flash-Lite (higher capacity)
+            const testModel = this.models.flashLite.name;
+            const response = await axios.post(
+                `${this.apiBaseUrl}/models/${testModel}:generateContent?key=${this.apiKey}`,
+                {
+                    contents: [{
+                        parts: [{ text: 'test' }]
+                    }],
+                    generationConfig: {
+                        maxOutputTokens: 5
+                    }
+                },
+                {
+                    headers: this.getHeaders(),
+                    timeout: 5000
+                }
+            );
+            
+            return {
+                available: true,
+                provider: 'google-gemini',
+                model: testModel
+            };
         } catch (error) {
             return {
                 available: false,
@@ -108,24 +190,16 @@ class OllamaService {
     }
     
     /**
-     * Generate AI response
+     * Generate AI response using Google Gemini
      */
     async generateResponse(userMessage, interactionHistory = [], visitorId = null) {
         // Validate configuration
-        if (!this.apiUrl) {
-            throw new Error('AI_API_URL or OLLAMA_API_URL not set in environment variables');
-        }
-        if (!this.model) {
-            throw new Error('AI_MODEL or OLLAMA_MODEL not set in environment variables');
-        }
-        if (!this.apiKey && !this.apiUrl.includes('localhost')) {
-            throw new Error('AI_API_KEY or OLLAMA_API_KEY not set in environment variables');
+        if (!this.apiKey) {
+            throw new Error('GOOGLE_AI_API_KEY or GEMINI_API_KEY not set in environment variables');
         }
         
         try {
-            console.log('🤖 Generating response...');
-            console.log('📡 API URL:', this.apiUrl);
-            console.log('🤖 Model:', this.model);
+            console.log('🤖 Generating response with Google Gemini...');
             
             // Detect persona and get prompt
             const personaDetection = personaDetector.detectPersona(userMessage, interactionHistory);
@@ -133,108 +207,102 @@ class OllamaService {
             const prompt = promptManager.getPrompt(contextKeywords, personaDetection.persona, userMessage);
             const systemPrompt = prompt.split('MESSAGE UTILISATEUR:')[0] || prompt;
             
-            let response;
+            // Determine if this is a complex request (long message or complex context)
+            const isComplex = userMessage.length > 200 || contextKeywords.length > 5 || personaDetection.confidence < 0.5;
             
-            if (this.format === 'ollama') {
-                // Ollama native format
-                let fullPrompt = `${systemPrompt}\n\nMESSAGE UTILISATEUR: ${userMessage}`;
-                
-                if (interactionHistory && interactionHistory.length > 0) {
-                    const historyText = interactionHistory.slice(-5).map(msg => {
-                        const role = msg.role || 'user';
-                        const content = msg.content || msg.message || '';
-                        return `${role === 'assistant' ? 'ASSISTANT' : 'UTILISATEUR'}: ${content}`;
-                    }).join('\n');
-                    fullPrompt = `${fullPrompt}\n\nHISTORIQUE:\n${historyText}`;
-                }
-                
-                const apiResponse = await axios.post(
-                    `${this.apiUrl}/api/generate`,
-                    {
-                        model: this.model,
-                        prompt: fullPrompt,
-                        stream: false,
-                        options: {
-                            temperature: 0.7,
-                            top_p: 0.9,
-                            top_k: 40
-                        }
-                    },
-                    {
-                        headers: this.getHeaders(),
-                        timeout: this.timeout
-                    }
-                );
-                
-                const generatedText = apiResponse.data.response || '';
-                
-                if (!generatedText) {
-                    throw new Error('Empty response from Ollama API');
-                }
-                
-                return {
-                    response: this.cleanResponse(generatedText),
-                    persona: personaDetection.persona,
-                    confidence: personaDetection.confidence,
-                    contextKeywords: contextKeywords,
-                    model: this.model,
-                    provider: 'ollama'
-                };
-            } else {
-                // OpenAI-compatible format (OpenRouter, DeepSeek, etc.)
-                const messages = [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userMessage }
-                ];
-                
-                // Add history if available
-                if (interactionHistory && interactionHistory.length > 0) {
-                    interactionHistory.slice(-5).forEach(msg => {
-                        messages.push({
-                            role: msg.role || 'user',
-                            content: msg.content || msg.message || ''
-                        });
-                    });
-                }
-                
-                const apiResponse = await axios.post(
-                    `${this.apiUrl}/chat/completions`,
-                    {
-                        model: this.model,
-                        messages: messages,
-                        temperature: 0.7,
-                        max_tokens: 500
-                    },
-                    {
-                        headers: this.getHeaders(),
-                        timeout: this.timeout
-                    }
-                );
-                
-                const generatedText = apiResponse.data.choices?.[0]?.message?.content || '';
-                
-                if (!generatedText) {
-                    throw new Error('Empty response from API');
-                }
-                
-                return {
-                    response: this.cleanResponse(generatedText),
-                    persona: personaDetection.persona,
-                    confidence: personaDetection.confidence,
-                    contextKeywords: contextKeywords,
-                    model: this.model,
-                    provider: 'openai-compatible'
-                };
+            // Select the best available model
+            const modelKey = this.selectModel(isComplex);
+            const model = this.models[modelKey];
+            
+            console.log(`📡 Using model: ${model.name} (${modelKey})`);
+            console.log(`📊 Daily usage - Flash: ${this.rateLimits.flash.dailyCount}/${this.models.flash.rpd}, Flash-Lite: ${this.rateLimits.flashLite.dailyCount}/${this.models.flashLite.rpd}`);
+            
+            // Build contents array for Gemini API
+            const contents = [];
+            
+            // Add system instruction as first user message (Gemini doesn't have system role)
+            if (systemPrompt) {
+                contents.push({
+                    role: 'user',
+                    parts: [{ text: `Instructions système: ${systemPrompt}` }]
+                });
+                contents.push({
+                    role: 'model',
+                    parts: [{ text: 'Compris. Je vais suivre ces instructions.' }]
+                });
             }
+            
+            // Add interaction history
+            if (interactionHistory && interactionHistory.length > 0) {
+                interactionHistory.slice(-5).forEach(msg => {
+                    const role = msg.role || 'user';
+                    const content = msg.content || msg.message || '';
+                    contents.push({
+                        role: role === 'assistant' ? 'model' : 'user',
+                        parts: [{ text: content }]
+                    });
+                });
+            }
+            
+            // Add current user message
+            contents.push({
+                role: 'user',
+                parts: [{ text: userMessage }]
+            });
+            
+            // Make API request
+            const apiResponse = await axios.post(
+                `${this.apiBaseUrl}/models/${model.name}:generateContent?key=${this.apiKey}`,
+                {
+                    contents: contents,
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 500,
+                        topP: 0.9,
+                        topK: 40
+                    }
+                },
+                {
+                    headers: this.getHeaders(),
+                    timeout: this.timeout
+                }
+            );
+            
+            // Record the request for rate limiting
+            this.recordRequest(modelKey);
+            
+            // Extract response text
+            const generatedText = apiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            
+            if (!generatedText) {
+                throw new Error('Empty response from Gemini API');
+            }
+            
+            console.log('✅ Gemini response received, length:', generatedText.length);
+            
+            return {
+                response: this.cleanResponse(generatedText),
+                persona: personaDetection.persona,
+                confidence: personaDetection.confidence,
+                contextKeywords: contextKeywords,
+                model: model.name,
+                provider: 'google-gemini',
+                modelKey: modelKey
+            };
         } catch (error) {
-            console.error('❌ AI API Error:', error.message);
+            console.error('❌ Gemini API Error:', error.message);
             if (error.response) {
                 console.error('❌ Status:', error.response.status);
                 console.error('❌ Data:', JSON.stringify(error.response.data));
             }
             
+            // Handle rate limiting errors
+            if (error.response?.status === 429) {
+                throw new Error('Rate limit reached. Please try again in a moment.');
+            }
+            
             const errorMessage = error.response?.data?.error?.message || error.message || 'Unknown error';
-            throw new Error(`AI API Error: ${errorMessage}`);
+            throw new Error(`Gemini API Error: ${errorMessage}`);
         }
     }
     
@@ -246,6 +314,7 @@ class OllamaService {
             .replace(/RÉPONSE.*?:/gi, '')
             .replace(/MESSAGE UTILISATEUR.*?:/gi, '')
             .replace(/CONTEXTE.*?:/gi, '')
+            .replace(/Instructions système.*?:/gi, '')
             .trim();
         
         cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
