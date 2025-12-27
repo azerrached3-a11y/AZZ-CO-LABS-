@@ -14,6 +14,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+// Vercel sits behind proxies and sets X-Forwarded-For.
+// Required for express-rate-limit to correctly identify clients.
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({
     origin: process.env.FRONTEND_URL || '*',
@@ -23,11 +26,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
 
-// Rate limiting
+// Rate limiting - Return JSON instead of text
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-    message: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.'
+    handler: (req, res) => {
+        res.json({ 
+            success: false,
+            error: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.'
+        });
+    }
 });
 app.use('/api/', limiter);
 
@@ -41,13 +49,16 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notes', notesRoutes);
 
-// Error handling
+// Error handling - Always return valid JSON, never 500
 app.use((err, req, res, next) => {
     console.error('Error:', err);
-    res.status(500).json({ 
-        error: 'Une erreur interne est survenue',
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+    if (!res.headersSent) {
+        res.json({ 
+            success: false,
+            error: 'Une erreur interne est survenue',
+            message: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
 });
 
 // For Vercel serverless functions, export the app directly
@@ -77,7 +88,7 @@ if (!process.env.VERCEL && require.main === module) {
         console.log('✅ Database initialized');
         app.listen(PORT, () => {
             console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`📡 Ollama API: ${process.env.OLLAMA_API_URL || 'http://localhost:11434'}`);
+            console.log(`📡 Google Gemini API: ${process.env.GOOGLE_AI_API_KEY ? 'Configured' : 'Not configured'}`);
         });
     }).catch(err => {
         console.error('❌ Database initialization failed:', err);
