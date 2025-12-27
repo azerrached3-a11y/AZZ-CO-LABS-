@@ -1,21 +1,22 @@
 {
   "duplications": [
     {
-      "type": "exact_duplicate",
+      "type": "similar_code",
       "files": [
-        "speed-insights.js",
-        "public/speed-insights.js"
+        "api/index.js",
+        "backend/server.js"
       ],
-      "severity": "high",
-      "message": "Exact duplicate found: speed-insights.js and public/speed-insights.js"
+      "severity": "medium",
+      "similarity": 79,
+      "message": "Similar code found: api/index.js and backend/server.js (79% similar)"
     }
   ],
   "inconsistencies": [
     {
-      "type": "inconsistent_error_handling",
+      "type": "missing_api_key_reference",
       "file": "backend/server.js",
-      "severity": "medium",
-      "message": "Mixed error handling in backend/server.js (both status(500) and json())"
+      "severity": "high",
+      "message": "No API key references found in backend/server.js"
     }
   ],
   "missingFiles": [],
@@ -48,12 +49,6 @@
       "file": "backend/server.js",
       "severity": "low",
       "message": "File backend/server.js may be unused (check if it's referenced)"
-    },
-    {
-      "type": "potentially_unused_file",
-      "file": "public/chatbot.js",
-      "severity": "low",
-      "message": "File public/chatbot.js may be unused (check if it's referenced)"
     },
     {
       "type": "potentially_unused_file",
