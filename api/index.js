@@ -115,7 +115,7 @@ if (!process.env.VERCEL && require.main === module) {
         console.log('✅ Database initialized');
         app.listen(PORT, () => {
             console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`📡 Ollama API: ${process.env.OLLAMA_API_URL || 'http://localhost:11434'}`);
+            console.log(`📡 Google Gemini API: ${process.env.GOOGLE_AI_API_KEY ? 'Configured' : 'Not configured'}`);
         });
     }).catch(err => {
         console.error('❌ Database initialization failed:', err);
