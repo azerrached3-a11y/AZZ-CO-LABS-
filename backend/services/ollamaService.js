@@ -114,6 +114,7 @@ class OllamaService {
         // Prefer Flash-Lite (higher capacity) for most requests
         if (this.isModelAvailable('flashLite')) {
             return 'flashLite';
+        }
         
         // Fallback to Flash if Flash-Lite is unavailable
         if (this.isModelAvailable('flash')) {
