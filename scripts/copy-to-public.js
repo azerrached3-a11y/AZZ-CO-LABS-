@@ -27,6 +27,7 @@ const staticFiles = [
     'script.js',
     'chatbot.js',
     'speed-insights.js',
+    'formspree-integration.js',
     'favicon.svg'
 ];
 

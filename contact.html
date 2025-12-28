@@ -107,7 +107,10 @@
                     <h2 style="font-size: 1.5rem; font-weight: 300; margin-bottom: 3rem; letter-spacing: -0.5px;">
                         Envoyez-nous un Message
                     </h2>
-                    <form class="contact-form" id="contactForm">
+                    <form class="contact-form" id="contactForm" action="https://formspree.io/f/xpzgkqwn" method="POST">
+                        <input type="hidden" name="_subject" value="Nouveau message depuis AZZ&CO LABS - Contact">
+                        <input type="hidden" name="_format" value="plain">
+                        <input type="hidden" name="_next" value="">
                         <div class="form-group">
                             <label for="name">Nom</label>
                             <input type="text" id="name" name="name" required>
@@ -208,5 +211,6 @@
     <script src="script.js"></script>
     <script src="chatbot.js"></script>
     <script src="speed-insights.js"></script>
+    <script src="formspree-integration.js"></script>
 </body>
 </html>
