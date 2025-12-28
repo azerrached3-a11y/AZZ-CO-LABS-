@@ -41,6 +41,12 @@
       "destination": "/careers.html"
     }
   ],
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
