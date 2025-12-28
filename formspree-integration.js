@@ -4,16 +4,19 @@
  */
 
 // Formspree Configuration
-const FORMSPREE_CONFIG = {
-    projectId: '2901802241138621618',
-    deployKey: '4044d470f6b64579adc57322e34c626a',
-    // Form IDs - Update these with your actual Formspree form IDs
-    // Create forms at: https://formspree.io/forms
-    endpoints: {
-        contact: 'https://formspree.io/f/xpzgkqwn', // TODO: Replace with your contact form ID
-        newsletter: 'https://formspree.io/f/xpzgkqwn' // TODO: Replace with your newsletter form ID
-    }
-};
+if (typeof FORMSPREE_CONFIG === 'undefined') {
+    window.FORMSPREE_CONFIG = {
+        projectId: '2901802241138621618',
+        deployKey: '4044d470f6b64579adc57322e34c626a',
+        // Form IDs - Update these with your actual Formspree form IDs
+        // Create forms at: https://formspree.io/forms
+        endpoints: {
+            contact: 'https://formspree.io/f/xpzgkqwn', // TODO: Replace with your contact form ID
+            newsletter: 'https://formspree.io/f/xpzgkqwn' // TODO: Replace with your newsletter form ID
+        }
+    };
+}
+const FORMSPREE_CONFIG = window.FORMSPREE_CONFIG;
 
 /**
  * Handle Contact Form Submission
@@ -39,7 +42,7 @@ async function handleContactForm(event) {
     
     try {
         // Use the form's action URL if available, otherwise use config
-        const formAction = form.getAttribute('action') || FORMSPREE_CONFIG.endpoints.contact;
+        const formAction = form.getAttribute('action') || (FORMSPREE_CONFIG && FORMSPREE_CONFIG.endpoints.contact);
         
         const response = await fetch(formAction, {
             method: 'POST',
@@ -96,7 +99,7 @@ async function handleNewsletterForm(event) {
         formData.append('_subject', 'Nouvelle inscription newsletter - AZZ&CO LABS');
         formData.append('_format', 'plain');
         
-        const response = await fetch(FORMSPREE_CONFIG.endpoints.newsletter, {
+        const response = await fetch((FORMSPREE_CONFIG && FORMSPREE_CONFIG.endpoints.newsletter) || '', {
             method: 'POST',
             body: formData,
             headers: {
