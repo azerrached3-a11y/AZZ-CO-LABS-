@@ -39,6 +39,10 @@
     {
       "source": "/careers",
       "destination": "/careers.html"
+    },
+    {
+      "source": "/zohoverify/verifyforzoho.html",
+      "destination": "/zohoverify/verifyforzoho.html"
     }
   ],
   "routes": [
