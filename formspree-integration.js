@@ -22,16 +22,26 @@ async function handleContactForm(event) {
     event.preventDefault();
     
     const form = event.target;
+    if (!form) {
+        console.error('Form not found');
+        return;
+    }
+    
     const formData = new FormData(form);
     const submitButton = form.querySelector('button[type="submit"]');
-    const originalText = submitButton.textContent;
+    const originalText = submitButton ? submitButton.textContent : 'Envoyer';
     
     // Disable button and show loading
-    submitButton.disabled = true;
-    submitButton.textContent = 'Envoi en cours...';
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Envoi en cours...';
+    }
     
     try {
-        const response = await fetch(FORMSPREE_CONFIG.endpoints.contact, {
+        // Use the form's action URL if available, otherwise use config
+        const formAction = form.getAttribute('action') || FORMSPREE_CONFIG.endpoints.contact;
+        
+        const response = await fetch(formAction, {
             method: 'POST',
             body: formData,
             headers: {
@@ -44,15 +54,17 @@ async function handleContactForm(event) {
             showFormMessage(form, 'Merci ! Votre message a été envoyé avec succès. Nous vous répondrons dans les plus brefs délais.', 'success');
             form.reset();
         } else {
-            const data = await response.json();
-            throw new Error(data.error || 'Une erreur est survenue');
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || `Erreur ${response.status}: ${response.statusText}`);
         }
     } catch (error) {
         console.error('Form submission error:', error);
         showFormMessage(form, 'Désolé, une erreur est survenue lors de l\'envoi. Veuillez réessayer ou nous contacter directement.', 'error');
     } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = originalText;
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
     }
 }
 
@@ -174,15 +186,24 @@ function showNewsletterMessage(messageEl, message, type) {
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
-    // Contact form
-    const contactForm = document.getElementById('contactForm');
+    // Contact form - try multiple selectors
+    const contactForm = document.getElementById('contactForm') || 
+                       document.querySelector('form#contactForm') ||
+                       document.querySelector('form.contact-form');
+    
     if (contactForm) {
+        console.log('✅ Contact form found, attaching handler');
         contactForm.addEventListener('submit', handleContactForm);
+    } else {
+        console.warn('⚠️ Contact form not found. Make sure the form has id="contactForm"');
     }
     
     // Newsletter form
-    const newsletterForm = document.getElementById('newsletterForm');
+    const newsletterForm = document.getElementById('newsletterForm') ||
+                          document.querySelector('form#newsletterForm');
+    
     if (newsletterForm) {
+        console.log('✅ Newsletter form found, attaching handler');
         newsletterForm.addEventListener('submit', handleNewsletterForm);
     }
 });
