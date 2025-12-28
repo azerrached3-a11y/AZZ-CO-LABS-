@@ -13,8 +13,8 @@
             // Form IDs - Update these with your actual Formspree form IDs
             // Create forms at: https://formspree.io/forms
             endpoints: {
-                contact: 'https://formspree.io/f/xpzgkqwn', // TODO: Replace with your contact form ID
-                newsletter: 'https://formspree.io/f/xpzgkqwn' // TODO: Replace with your newsletter form ID
+                contact: 'https://formspree.io/f/xbdjyzov',
+                newsletter: 'https://formspree.io/f/xbdjyzov'
             }
         };
     }
