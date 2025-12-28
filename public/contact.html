@@ -26,6 +26,7 @@
                 <li><a href="jobboat.html" class="nav-link">JobBoat</a></li>
                 <li><a href="invest.html" class="nav-link">Investir</a></li>
                 <li><a href="outwings.html" class="nav-link">OutWings</a></li>
+                <li><a href="careers.html" class="nav-link">Carrières</a></li>
                 <li><a href="contact.html" class="nav-link active">Contact</a></li>
             </ul>
             <div class="hamburger" id="hamburger">
@@ -101,26 +102,57 @@
                     </div>
                 </div>
 
-                <!-- Contact Form -->
+                <!-- Contact Form - Optimized for Conversion -->
                 <div>
-                    <h2 style="font-size: 1.5rem; font-weight: 300; margin-bottom: 3rem; letter-spacing: -0.5px;">
-                        Envoyez-nous un Message
+                    <div style="background: var(--gradient-gold-subtle); border-left: 4px solid var(--color-gold); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Réponse Garantie sous 24h</h3>
+                        <p style="font-size: 0.9375rem; color: var(--text-secondary); margin: 0;">Consultation gratuite • Pas d'engagement • Expert dédié</p>
+                    </div>
+                    <h2 style="font-size: 1.75rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.5px;">
+                        Parlez-nous de Votre Projet
                     </h2>
-                    <form class="contact-form" id="contactForm">
+                    <p style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 2.5rem;">
+                        Remplissez le formulaire ci-dessous et notre équipe vous contactera dans les plus brefs délais.
+                    </p>
+                    <form class="contact-form" id="contactForm" action="https://formspree.io/f/xpzgkqwn" method="POST">
+                        <input type="hidden" name="_subject" value="Nouveau message depuis AZZ&CO LABS - Contact">
+                        <input type="hidden" name="_format" value="plain">
+                        <input type="hidden" name="_next" value="">
+                        <input type="hidden" name="source" id="source" value="">
                         <div class="form-group">
-                            <label for="name">Nom</label>
-                            <input type="text" id="name" name="name" required>
+                            <label for="name" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Nom complet <span style="color: var(--color-gold);">*</span></label>
+                            <input type="text" id="name" name="name" required placeholder="Votre nom" style="width: 100%; padding: 1rem; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; transition: all 0.3s;" onfocus="this.style.borderColor='var(--color-gold)'; this.style.outline='none';" onblur="this.style.borderColor='var(--border-light)';">
                         </div>
                         <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email" required>
+                            <label for="email" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Email professionnel <span style="color: var(--color-gold);">*</span></label>
+                            <input type="email" id="email" name="email" required placeholder="votre@email.com" style="width: 100%; padding: 1rem; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; transition: all 0.3s;" onfocus="this.style.borderColor='var(--color-gold)'; this.style.outline='none';" onblur="this.style.borderColor='var(--border-light)';">
                         </div>
                         <div class="form-group">
-                            <label for="message">Message</label>
-                            <textarea id="message" name="message" rows="6" required></textarea>
+                            <label for="phone" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Téléphone (optionnel)</label>
+                            <input type="tel" id="phone" name="phone" placeholder="+33 6 12 34 56 78" style="width: 100%; padding: 1rem; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; transition: all 0.3s;" onfocus="this.style.borderColor='var(--color-gold)'; this.style.outline='none';" onblur="this.style.borderColor='var(--border-light)';">
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Envoyer le message</button>
+                        <div class="form-group">
+                            <label for="message" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Décrivez votre projet <span style="color: var(--color-gold);">*</span></label>
+                            <textarea id="message" name="message" rows="6" required placeholder="Parlez-nous de vos besoins, objectifs, budget approximatif..." style="width: 100%; padding: 1rem; border: 2px solid var(--border-light); border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical; transition: all 0.3s;" onfocus="this.style.borderColor='var(--color-gold)'; this.style.outline='none';" onblur="this.style.borderColor='var(--border-light)';"></textarea>
+                        </div>
+                        <div style="background: var(--bg-grey-light); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem; color: var(--text-secondary);">
+                            <strong style="color: var(--text-primary);">🔒 Vos données sont sécurisées</strong><br>
+                            Nous respectons votre vie privée et ne partageons jamais vos informations avec des tiers.
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1.25rem; font-size: 1.125rem; font-weight: 700; background: var(--gradient-gold); color: var(--color-black); border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s; box-shadow: var(--shadow-gold);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-gold-glow)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-gold)';">Envoyer ma demande →</button>
+                        <p style="text-align: center; margin-top: 1rem; font-size: 0.875rem; color: var(--text-tertiary);">
+                            En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe.
+                        </p>
                     </form>
+                    <script src="formspree-integration.js"></script>
+                    <script>
+                        // Capture source parameter from URL
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const source = urlParams.get('source');
+                        if (source) {
+                            document.getElementById('source').value = source;
+                        }
+                    </script>
                 </div>
             </div>
         </div>
@@ -142,6 +174,7 @@
                         <li><a href="jobboat.html">JobBoat</a></li>
                         <li><a href="invest.html">Investir</a></li>
                         <li><a href="outwings.html">OutWings</a></li>
+                        <li><a href="careers.html">Carrières</a></li>
                         <li><a href="contact.html">Contact</a></li>
                     </ul>
                 </div>
@@ -182,7 +215,7 @@
         <div class="chatbot-container" id="chatbotContainer">
             <div class="chatbot-header">
                 <div class="chatbot-header-info">
-                    <h3>NICKY'S PIZZA</h3>
+                    <h3>AZZ&CO LABS Support</h3>
                     <p style="font-size: 0.875rem; font-weight: 300; color: var(--text-secondary); margin-top: 0.25rem;">
                         Je suis là pour vous servir. Comment puis-je vous aider ?
                     </p>
@@ -190,11 +223,7 @@
                 <button class="chatbot-close" id="chatbotClose">×</button>
             </div>
             <div class="chatbot-messages" id="chatbotMessages">
-                <div class="chatbot-message bot-message">
-                    <div class="message-content">
-                        <p>Bonjour. Je suis là pour vous servir. Je serais ravi de vous aider à découvrir ce que nous pouvons faire pour vous, ou répondre à toutes vos questions. Que souhaitez-vous savoir ?</p>
-                    </div>
-                </div>
+                <!-- Messages will be added dynamically -->
             </div>
             <div class="chatbot-input-container">
                 <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Tapez votre message..." />
@@ -211,5 +240,6 @@
     <script src="script.js"></script>
     <script src="chatbot.js"></script>
     <script src="speed-insights.js"></script>
+    <script src="formspree-integration.js"></script>
 </body>
 </html>
