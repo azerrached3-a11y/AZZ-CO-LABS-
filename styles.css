@@ -1069,17 +1069,40 @@ html {
 }
 
 /* Career Images Styling */
-.card img {
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+.career-image-card {
+    cursor: pointer;
 }
 
-.card:hover img {
-    transform: scale(1.05);
+.career-image-card img {
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+
+.career-image-card:hover img {
+    transform: scale(1.08);
+}
+
+.career-image-card:hover {
+    border-color: var(--color-gold-bright) !important;
 }
 
 /* Responsive grid for career images */
 @media (max-width: 1024px) {
-    .card[style*="grid-column: span 2"] {
+    .career-image-card[style*="grid-column: span 2"] {
         grid-column: span 1 !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .career-image-card {
+        aspect-ratio: 16/9 !important;
+    }
+    
+    .career-image-card h3 {
+        font-size: 1.5rem !important;
+    }
+    
+    .career-image-card p {
+        font-size: 1rem !important;
     }
 }
