@@ -185,15 +185,19 @@ function showNewsletterMessage(messageEl, message, type) {
 }
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', function() {
-    // Contact form - try multiple selectors
+function initializeForms() {
+    // Contact form - try multiple selectors with delay for dynamic content
     const contactForm = document.getElementById('contactForm') || 
                        document.querySelector('form#contactForm') ||
-                       document.querySelector('form.contact-form');
+                       document.querySelector('form.contact-form') ||
+                       document.querySelector('.contact-form');
     
     if (contactForm) {
         console.log('✅ Contact form found, attaching handler');
-        contactForm.addEventListener('submit', handleContactForm);
+        // Remove any existing listeners
+        const newForm = contactForm.cloneNode(true);
+        contactForm.parentNode.replaceChild(newForm, contactForm);
+        newForm.addEventListener('submit', handleContactForm);
     } else {
         console.warn('⚠️ Contact form not found. Make sure the form has id="contactForm"');
     }
@@ -206,7 +210,20 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('✅ Newsletter form found, attaching handler');
         newsletterForm.addEventListener('submit', handleNewsletterForm);
     }
-});
+}
+}
+
+// Try immediately
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeForms);
+} else {
+    // DOM already loaded
+    initializeForms();
+}
+
+// Also try after a short delay in case forms are added dynamically
+setTimeout(initializeForms, 500);
+setTimeout(initializeForms, 1500);
 
 // Export for use in inline scripts
 if (typeof window !== 'undefined') {

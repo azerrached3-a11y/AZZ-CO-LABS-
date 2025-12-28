@@ -84,7 +84,11 @@ function copyDirectory(src, dest) {
             if (entry.isDirectory()) {
                 copyRecursive(srcPath, destPath);
             } else {
-                fs.copyFileSync(srcPath, destPath);
+                // Skip README files but copy everything else
+                if (!entry.name.toLowerCase().includes('readme')) {
+                    fs.copyFileSync(srcPath, destPath);
+                    console.log(`  ✅ Copied ${path.relative(ROOT_DIR, srcPath)} → ${path.relative(PUBLIC_DIR, destPath)}`);
+                }
             }
         }
     }
