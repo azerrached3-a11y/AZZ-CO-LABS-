@@ -3,8 +3,8 @@
  * Handles form submissions for contact and newsletter forms
  */
 
-// Formspree Configuration
-if (typeof FORMSPREE_CONFIG === 'undefined') {
+// Formspree Configuration - Use window object to avoid redeclaration errors
+if (typeof window.FORMSPREE_CONFIG === 'undefined') {
     window.FORMSPREE_CONFIG = {
         projectId: '2901802241138621618',
         deployKey: '4044d470f6b64579adc57322e34c626a',
@@ -16,7 +16,8 @@ if (typeof FORMSPREE_CONFIG === 'undefined') {
         }
     };
 }
-const FORMSPREE_CONFIG = window.FORMSPREE_CONFIG;
+// Create a local reference for easier access
+const FORMSPREE_CONFIG = window.FORMSPREE_CONFIG || {};
 
 /**
  * Handle Contact Form Submission
