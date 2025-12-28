@@ -209,6 +209,12 @@ router.get('/history/:sessionId', async (req, res) => {
     try {
         const { sessionId } = req.params;
         const db = getDatabase();
+        
+        // If database is not available, return empty history
+        if (!db) {
+            console.warn('⚠️  Database not available - returning empty history');
+            return res.json({ history: [] });
+        }
 
         return new Promise((resolve, reject) => {
             db.all(
@@ -222,11 +228,11 @@ router.get('/history/:sessionId', async (req, res) => {
                         reject(err);
                         return;
                     }
-                    resolve(rows);
+                    resolve(rows || []);
                 }
             );
         }).then(history => {
-            res.json({ history });
+            res.json({ history: history || [] });
         }).catch(error => {
             console.error('Error fetching history:', error);
             res.json({ history: [], error: 'Erreur lors de la récupération de l\'historique' });
