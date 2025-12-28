@@ -211,7 +211,6 @@ function initializeForms() {
         newsletterForm.addEventListener('submit', handleNewsletterForm);
     }
 }
-}
 
 // Try immediately
 if (document.readyState === 'loading') {
